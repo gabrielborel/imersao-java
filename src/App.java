@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
@@ -11,24 +12,20 @@ public class App {
 
    public static void main(String[] args) throws Exception {
       String apiURL = "https://alura-filmes.herokuapp.com/conteudos";
-      URI apiURI = URI.create(apiURL);
-
-      var httpClient = HttpClient.newHttpClient();
-      var request = HttpRequest.newBuilder(apiURI).GET().build();
-      HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
-
-      var parser = new JsonParser();
-      List<Map<String, String>> movieList = parser.parse(response.body());
+      var httpClient = new MyHttpClient();
+      String json = httpClient.getData(apiURL);
 
       var stickerFactory = new StickerFactory();
-      for (Map<String, String> movie : movieList) {
-         String imageURL = movie.get("image").replaceAll("(@+)(.*).jpg$", "$1.jpg");
-         String title = movie.get("title");
-         String rating = movie.get("imDbRating");
+      ContentExtractor imdbContentExtractor = new IMDBContentExtractor();
+      List<Content> contentList = imdbContentExtractor.extract(json);
+
+      for (int i = 0; i < 4; i++) {
+         Content content = contentList.get(i);
+         String imageURL = content.getUrlImage();
+         String title = content.getTitle();
+
          var inputStream = new URL(imageURL).openStream();
-         String fileName = "src/assets/out" + title + ".png";
-         var newMovie = new Movie(title, imageURL, rating);
-         newMovie.printMovie();
+         String fileName = "src/assets/out/" + title + ".png";
 
          stickerFactory.generate(inputStream, fileName);
       }
